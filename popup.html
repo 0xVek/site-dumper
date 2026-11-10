@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Site Dumper v6</title>
+<style>
+  :root {
+    --bg:      #111317;
+    --surface: #1c1f26;
+    --border:  #2a2d35;
+    --accent:  #6c8fff;
+    --green:   #4ade80;
+    --red:     #f87171;
+    --yellow:  #facc15;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --radius:  8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 380px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+  }
+  .header-title { font-size: 15px; font-weight: 700; letter-spacing: .3px; }
+  .header-ver   { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+  /* ── URL bar ── */
+  .url-bar {
+    margin: 10px 16px 0;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Framework pill ── */
+  .framework-pill {
+    display: none;
+    margin: 8px 16px 0;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    width: fit-content;
+    background: #1e2535;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .framework-pill.nextjs    { background: #0d1117; border-color: #444; }
+  .framework-pill.nuxt      { background: #0d2214; border-color: #2d6a4f; color: #4ade80; }
+  .framework-pill.sveltekit { background: #2d1600; border-color: #c2440e; color: #fb923c; }
+  .framework-pill.vite      { background: #1a0d2d; border-color: #7c3aed; color: #c084fc; }
+
+  /* ── Options panel ── */
+  .options {
+    margin: 10px 16px 0;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .options-title { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 8px; letter-spacing: .5px; text-transform: uppercase; }
+  .opts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+  }
+  .opt-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 11.5px;
+    transition: border-color .15s;
+  }
+  .opt-chip:hover { border-color: var(--accent); }
+  .opt-chip input { accent-color: var(--accent); cursor: pointer; }
+
+  /* ── Max pages slider ── */
+  .pages-row {
+    margin: 10px 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .pages-row label { flex-shrink: 0; }
+  .pages-row input[type=range] {
+    flex: 1;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .pages-val {
+    font-weight: 700;
+    color: var(--text);
+    min-width: 20px;
+    text-align: right;
+  }
+
+  /* ── Dump button ── */
+  .dump-btn {
+    display: block;
+    width: calc(100% - 32px);
+    margin: 12px 16px 0;
+    padding: 11px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    letter-spacing: .3px;
+    transition: opacity .15s, transform .1s;
+  }
+  .dump-btn:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+  .dump-btn:active:not(:disabled){ transform: translateY(0); }
+  .dump-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+  /* ── Status ── */
+  #status {
+    display: none;
+    margin: 10px 16px 0;
+    padding: 9px 11px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #status.running { background: #0f1b2d; border: 1px solid #1e3a5f; color: #93c5fd; }
+  #status.done    { background: #0a1f14; border: 1px solid #166534; color: var(--green); }
+  #status.error   { background: #1f0a0a; border: 1px solid #7f1d1d; color: var(--red); }
+
+  /* ── Stats row ── */
+  #statsRow {
+    display: none;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 16px 0;
+  }
+  .stat-chip {
+    padding: 4px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .stat-chip span { font-weight: 700; color: var(--text); }
+  .stat-chip.warn span { color: var(--yellow); }
+  .stat-chip.ok   span { color: var(--green); }
+  .stat-chip.info span { color: var(--accent); }
+
+  /* ── Phase bar ── */
+  .phase-hint {
+    margin: 8px 16px 0;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    min-height: 15px;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    margin: 12px 0 0;
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+  /* ── Credit ── */
+  .header-credit {
+    margin-left: auto;
+    margin-right: 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+  }
+  .credit-by {
+    color: var(--muted);
+  }
+  .credit-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .credit-link:hover {
+    text-decoration: underline;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">🗜</div>
+  <div class="header-title">Site Dumper</div>
+  <div class="header-credit">
+    <span class="credit-by">Created by</span>
+    <a class="credit-link" href="https://github.com/The-viv1" target="_blank">
+      viv1
+    </a>
+  </div>
+  <div class="header-ver">v6.0</div>
+</div>
+
+<!-- Current URL -->
+<div class="url-bar" id="currentUrl">Detecting page…</div>
+
+<!-- Framework badge -->
+<div class="framework-pill" id="frameworkPill"></div>
+
+<!-- Options -->
+<div class="options">
+  <div class="options-title">Include in dump</div>
+  <div class="opts-grid">
+    <label class="opt-chip"><input type="checkbox" id="optJS"     checked> JS</label>
+    <label class="opt-chip"><input type="checkbox" id="optCSS"    checked> CSS</label>
+    <label class="opt-chip"><input type="checkbox" id="optIMG"    checked> Images</label>
+    <label class="opt-chip"><input type="checkbox" id="optFONT"   checked> Fonts</label>
+    <label class="opt-chip"><input type="checkbox" id="optSTORE"  checked> Storage</label>
+    <label class="opt-chip"><input type="checkbox" id="optINLINE" checked> Inline</label>
+  </div>
+</div>
+
+<!-- Max pages -->
+<div class="pages-row">
+  <label for="maxPages">Pages to crawl:</label>
+  <input type="range" id="maxPages" min="1" max="20" value="5" step="1">
+  <span class="pages-val" id="maxPagesVal">5</span>
+</div>
+
+<!-- Dump button -->
+<button class="dump-btn" id="dumpBtn">⬇ Dump Site</button>
+
+<!-- Status -->
+<div id="status"></div>
+
+<!-- Stats -->
+<div id="statsRow">
+  <div class="stat-chip info">JS <span id="statJS">—</span></div>
+  <div class="stat-chip info">CSS <span id="statCSS">—</span></div>
+  <div class="stat-chip info">IMG <span id="statIMG">—</span></div>
+  <div class="stat-chip ok">✓ <span id="statOK">—</span></div>
+  <div class="stat-chip warn">✗ <span id="statFAIL">—</span></div>
+  <div class="stat-chip">📄 Pages <span id="statPAGES">—</span></div>
+  <div class="stat-chip info">🖱 Clicks <span id="statCLICK">—</span></div>
+  <div class="stat-chip ok">+Found <span id="statFOUND">—</span></div>
+  <div class="stat-chip warn">⚠ Missed <span id="statMISSED">—</span></div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <span>Drop ZIP on <a href="https://app.netlify.com/drop" target="_blank">Netlify Drop</a> to deploy</span>
+  <span>v6 · max extract</span>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
